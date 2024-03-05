@@ -79,6 +79,11 @@
             align-items: center;
         }
 
+        .arrows-table.hide {
+            visibility: hidden;
+        }
+
+
         .arrow-image {
             margin: auto;
         }
@@ -142,6 +147,53 @@
             z-index: 10;
             padding-bottom: 20px;
         }
+
+        .config-popup {
+            margin: auto;
+            width: 40%;
+            border-top-left-radius: 5%;
+            border-bottom-right-radius: 5%;
+            background-color: #5c5400;
+            z-index: 11;
+            padding-bottom: 20px;
+        }
+
+        .config-line {
+            display: flex;
+            color: #FFE900;
+            font-family: Oxanium, Verdana, Geneva, Tahoma, sans-serif;
+        }
+
+        .config-label {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+        .config-input {
+            color: #FFE900;
+            background-color: #5c5400;
+            border-style: inset;
+        }
+
+        .stratagems-filter-table {
+            display: flex;
+            flex-wrap: wrap;
+
+            padding-left: 5px;
+            padding-top: 5px;
+        }
+
+        .stratagems-filter-button {
+            width: 40px;
+            height: 40px;
+            font-size: 16pt;
+            text-align: center;
+        }
+
+        .stratagems-filter-button.filtered{
+            opacity: 0.5;
+        }
+
 
         #completed-strategems-readout {
             color: #FFE900;
@@ -210,8 +262,8 @@
         <img class="logo" src="./Images/Helldivers_2_logo.webp">
     </div>
 
-    <h1 class="title">
-        STRATAGEM HERO ONLINE
+    <h1 class="title" onclick="toggleConfig()">
+        STRATAGEM HERO ONLINE ⚙️
     </h1>
 
     <div class="interactable-center-container" id="interactable-center-container">
@@ -281,6 +333,23 @@
                 </tr>
             </table>
         </button>
+    </div>
+
+    <div class="config-popup" id="config-popup" hidden="hidden">
+        <h1 class="title">Filter Config</h1>
+        <div class="config-line">
+            <div class="config-label">TOTAL_TIME (ms)</div>
+            <input class="config-input" id="config-total-time" type="text" size="5" value="10000" />
+        </div>
+        <div class="config-line">
+            <div class="config-label">CORRECT_TIME_BONUS (ms)</div>
+            <input class="config-input" id="config-correct-time-bonus" type="text" size="4" value="500" />
+        </div>
+        <div class="config-line"> 
+            <div class="config-label">Hide arrows?</div>
+            <input class="config-input" id="config-hide-arrows" type="checkbox" />
+        </div>
+        <div class="stratagems-filter-table" id="stratagems-filter-table"></div>
     </div>
 
     <div class="info">

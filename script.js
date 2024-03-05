@@ -1,5 +1,99 @@
 // Load stratagem data
 let stratagems = JSON.parse(data).list;
+
+// Load filter from local storage
+let filter = localStorage.getItem('filter') || {};
+
+if (typeof filter === 'string')
+{
+    try {
+        filter = JSON.parse(filter);
+    } catch (e)
+    {
+        filter = {};
+    }
+}
+
+
+// Initiate stratagem filter state
+for (let stratagem of stratagems)
+{
+    stratagem.disabled = false;
+}
+
+for (let key in filter)
+{
+    let found = false;
+    for (let stratagem of stratagems)
+    {
+        let {name} = stratagem;
+        if (filter[key] === name)
+        {
+            stratagem.disabled = true;
+            found = true;
+        }
+    }
+
+    // prune bad/old keys
+    if (!found)
+        delete filter[key];
+}
+
+// Save our filter again
+localStorage.setItem('filter', JSON.stringify(filter));
+
+
+// Setup filter config DOM
+const filterTableEl = document.getElementById('stratagems-filter-table');
+
+for (let i in stratagems)
+{
+    let div = document.createElement('div');
+
+    
+    div.id = `filter_${i}`;
+    div.className = `stratagems-filter-button`;
+    div.title = stratagems[i].name;
+
+    if (stratagems[i].disabled)
+        div.classList.toggle("filtered");
+
+    if (stratagems[i].image.length > 0)
+    {
+        let img = document.createElement('img');
+        img.src = `./Images/Stratagem\ Icons/${stratagems[i].image}`;
+        div.appendChild(img);
+    }
+    else
+    {
+        div.innerText = '❓';
+    }
+
+    // addEventListener instead?
+    div.onclick = (evt) => { 
+        //console.log("clicked", div, i, evt)
+        
+        // update stratagems and saved filter
+        if (stratagems[i].disabled)
+        {
+            stratagems[i].disabled = false;
+            delete filter[i];
+        }
+        else
+        {
+            stratagems[i].disabled = true;
+            filter[i] = stratagems[i].name;
+        }
+
+        localStorage.setItem('filter', JSON.stringify(filter));
+
+        // update dom
+        div.classList.toggle("filtered");
+    };
+
+    filterTableEl.appendChild(div);
+}
+
 let gpPollInterval;
 const gpPollRate = 1000;
 const gpButtonToKeyMap = {
@@ -70,10 +164,10 @@ var currentSequenceIndex = 0;
 var currentRefreshIndex = 0;
 var currentArrowSequenceTags = undefined;
 var refreshArrowSequenceTags;
-const TOTAL_TIME = 10000;
+var TOTAL_TIME = 10000;
 const COUNTDOWN_STEP = 10;
 const NEW_STRATEGEM_TIMEOUT = 200;
-const CORRECT_TIME_BONUS = 500;
+var CORRECT_TIME_BONUS = 500;
 const FAILURE_SHAKE_TIME = 200;
 var timeRemaining = TOTAL_TIME;
 var completedStrategemsList = [];
@@ -217,7 +311,10 @@ function updateArrowFilters(arrowTags, index){
 }
 
 function shakeArrows(time){
-    document.getElementById("arrows-container").setAttribute("style", `animation: shake ${time/1000}s;`);
+    let arrowsContainer = document.getElementById("arrows-container");
+    arrowsContainer.classList.remove("hide");
+    arrowsContainer.setAttribute("style", `animation: shake ${time/1000}s;`);
+
 
     setTimeout(() => {
         document.getElementById("arrows-container").removeAttribute("style");
@@ -238,7 +335,16 @@ function refreshStratagemDisplay(){
 }
 
 function pickRandomStratagem(){
-    return stratagems[Math.floor(Math.random() * stratagems.length)];
+    // should probably just build this on filter change
+    let availableStratagems = [];
+    for (let stratagem of stratagems)
+    {
+        if (!stratagem.disabled)
+            availableStratagems.push(stratagem);
+    }
+
+    return availableStratagems[Math.floor(Math.random() * availableStratagems.length)];
+    //return stratagems[Math.floor(Math.random() * stratagems.length)];
 }
 
 function showArrowSequence(arrowSequence, arrowsContainer){
@@ -275,6 +381,13 @@ function showArrowSequence(arrowSequence, arrowsContainer){
         arrowsContainer.appendChild(td);
         arrowTags.push(img);
     }
+
+    if (HIDE_ARROWS === true)
+        arrowsContainer.classList.add("hide");
+    
+    if (gameState === "over")
+        arrowsContainer.classList.remove("hide");
+
     return arrowTags;
 }
 
@@ -308,6 +421,116 @@ function gameOver(){
     // Play game over sfx
     sfxGameOver[Math.floor(Math.random() * sfxGameOver.length)].play();
 }
+
+function toggleConfig()
+{
+    let popup = document.getElementById("config-popup");
+    let scoreboard = document.getElementById("game-over-popup");
+    const cachedGameState = gameState;
+    gameState = "PAUSED";
+
+    const scoreboardVisible = (scoreboard.style.visibility === "visible") ? true : false;
+
+    if (popup.hasAttribute("hidden") || popup.style.visibility === "hidden")
+    {
+        if (!scoreboardVisible)
+        {
+            // Hide the game
+            let game = document.getElementById("interactable-center-container");
+            game.setAttribute("hidden", "hidden");
+            game.style.visibility = "invisible";
+        }
+        else
+        {
+            // Hide the scoreboard
+            scoreboard.setAttribute("hidden", "hidden");
+            scoreboard.style.visibility = "invisible";
+        }
+
+
+        // Show config
+        popup.removeAttribute("hidden");
+        popup.style.visibility = "visible";
+    }
+    else
+    {
+        // hide config
+        popup.style.visibility = "hidden";
+
+        if (!scoreboardVisible)
+        {
+            // Show the game
+            let game = document.getElementById("interactable-center-container");
+            game.removeAttribute("hidden");
+            game.style.visibility = "visible";
+        }
+        else
+        {
+            // Show the scoreboard
+            scoreboard.removeAttribute("hidden");
+            scoreboard.style.visibility = "visible";
+        }
+    }
+
+    gameState = cachedGameState;
+}
+
+// Setup CORRECT_TIME_BONUS configuration / local storage / input listener
+const configTimeBonusEl = document.getElementById('config-correct-time-bonus');
+let config_CorrectTimeBonus = parseInt(localStorage.getItem("CORRECT_TIME_BONUS"));
+
+if (isNaN(config_CorrectTimeBonus))
+    localStorage.setItem("CORRECT_TIME_BONUS", CORRECT_TIME_BONUS);    
+else
+    CORRECT_TIME_BONUS = config_CorrectTimeBonus;
+
+configTimeBonusEl.value = CORRECT_TIME_BONUS;
+configTimeBonusEl.addEventListener("input", (evt) => {
+    //console.log("changed", evt, configTimeBonusEl, configTimeBonusEl.value, CORRECT_TIME_BONUS);
+    newTimeBonus = parseInt(configTimeBonusEl.value);
+    if (isNaN(newTimeBonus))
+        return;
+
+    CORRECT_TIME_BONUS = newTimeBonus;
+    localStorage.setItem("CORRECT_TIME_BONUS", CORRECT_TIME_BONUS);
+});
+
+// Setup TOTAL_TIME configuration / local storage / input listener
+const configTimeEl = document.getElementById('config-total-time');
+let config_TotalTime = parseInt(localStorage.getItem("TOTAL_TIME"));
+
+if (isNaN(config_TotalTime))
+    localStorage.setItem("TOTAL_TIME", TOTAL_TIME);    
+else
+    TOTAL_TIME = config_TotalTime;
+timeRemaining = TOTAL_TIME;
+
+configTimeEl.value = TOTAL_TIME;
+configTimeEl.addEventListener("input", (evt) => {
+    //console.log("changed", evt, configTimeEl, configTimeEl.value, TOTAL_TIME);
+    newTime = parseInt(configTimeEl.value);
+    if (isNaN(newTime))
+        return;
+
+    TOTAL_TIME = newTime;
+    localStorage.setItem("TOTAL_TIME", TOTAL_TIME);
+});
+
+
+// Setup config-hide-arrows
+var HIDE_ARROWS = (localStorage.getItem("HIDE_ARROWS") === "true");
+const configHideArrowsEl = document.getElementById('config-hide-arrows');
+
+configHideArrowsEl.checked = HIDE_ARROWS;
+
+configHideArrowsEl.addEventListener("change", (evt) => {
+    if (configHideArrowsEl.checked)
+        HIDE_ARROWS = true;
+    else
+        HIDE_ARROWS = false;
+    
+    localStorage.setItem("HIDE_ARROWS", HIDE_ARROWS);
+});
 
 function stratagemListToString(html, spamless){
     // Set direction characters
